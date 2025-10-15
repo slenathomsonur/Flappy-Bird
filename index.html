@@ -1,0 +1,1040 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Flappy Bird - Dem Studios</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #1a2a6c, #b21f1f, #fdbb2d);
+            overflow: hidden;
+            transition: all 0.3s;
+        }
+        
+        body.flashing {
+            animation: flashScreen 0.2s infinite;
+        }
+        
+        @keyframes flashScreen {
+            0% { background: linear-gradient(135deg, #1a2a6c, #b21f1f, #fdbb2d); }
+            50% { background: linear-gradient(135deg, #ff0000, #ff3333, #ff6666); }
+            100% { background: linear-gradient(135deg, #1a2a6c, #b21f1f, #fdbb2d); }
+        }
+        
+        #game-container {
+            position: relative;
+            width: 400px;
+            height: 600px;
+            perspective: 1000px;
+        }
+        
+        #game-canvas {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background-color: #70c5ce;
+            border-radius: 12px;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.5);
+            transform-style: preserve-3d;
+            transform: rotateX(10deg);
+            overflow: hidden;
+        }
+        
+        .screen {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background: rgba(0, 0, 0, 0.85);
+            border-radius: 12px;
+            color: white;
+            text-align: center;
+            z-index: 10;
+            transition: opacity 0.5s;
+            padding: 20px;
+        }
+        
+        #start-screen h1 {
+            font-size: 42px;
+            margin-bottom: 20px;
+            text-shadow: 2px 2px 8px rgba(0, 0, 0, 0.7);
+            color: #FFD700;
+            background: linear-gradient(to right, #FFD700, #FFA500);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        #game-over-screen h2 {
+            font-size: 42px;
+            margin-bottom: 20px;
+            color: #FF4500;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+        }
+        
+        #pause-screen h2 {
+            font-size: 42px;
+            margin-bottom: 20px;
+            color: #FFD700;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+        }
+        
+        .btn {
+            padding: 14px 32px;
+            margin: 12px;
+            font-size: 18px;
+            font-weight: bold;
+            background: linear-gradient(to bottom, #4CAF50, #45a049);
+            color: white;
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .btn:hover {
+            background: linear-gradient(to bottom, #45a049, #3d8b40);
+            transform: translateY(-3px);
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.4);
+        }
+        
+        .btn:active {
+            transform: translateY(1px);
+            box-shadow: 0 3px 6px rgba(0, 0, 0, 0.3);
+        }
+        
+        .accept-btn {
+            background: linear-gradient(to bottom, #ff3333, #cc0000);
+            font-size: 20px;
+            padding: 16px 40px;
+            animation: pulse 2s infinite;
+        }
+        
+        .accept-btn:hover {
+            background: linear-gradient(to bottom, #cc0000, #990000);
+        }
+        
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+        
+        #score-display {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            font-size: 26px;
+            color: white;
+            z-index: 5;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.7);
+            background: rgba(0, 0, 0, 0.5);
+            padding: 8px 16px;
+            border-radius: 20px;
+        }
+        
+        #pause-btn {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            padding: 10px 18px;
+            font-size: 16px;
+            font-weight: bold;
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            z-index: 5;
+            transition: all 0.3s;
+            backdrop-filter: blur(5px);
+        }
+        
+        #pause-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: scale(1.05);
+        }
+        
+        .hidden {
+            display: none !important;
+        }
+        
+        .instructions {
+            margin: 20px 0;
+            font-size: 18px;
+            max-width: 90%;
+            line-height: 1.6;
+            color: #ddd;
+        }
+        
+        .final-score {
+            font-size: 28px;
+            margin: 20px 0;
+            color: #FFD700;
+            text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.5);
+        }
+        
+        .speed-controls {
+            margin: 20px 0;
+            width: 80%;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 15px;
+            border-radius: 10px;
+        }
+        
+        .speed-controls h3 {
+            margin-bottom: 15px;
+            color: #FFD700;
+        }
+        
+        .speed-slider {
+            width: 100%;
+            margin: 10px 0;
+            -webkit-appearance: none;
+            height: 10px;
+            border-radius: 5px;
+            background: #ddd;
+            outline: none;
+        }
+        
+        .speed-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 25px;
+            height: 25px;
+            border-radius: 50%;
+            background: #4CAF50;
+            cursor: pointer;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+        }
+        
+        .speed-value {
+            font-size: 18px;
+            margin-top: 10px;
+            color: #4CAF50;
+        }
+        
+        .copyright {
+            position: absolute;
+            bottom: 10px;
+            width: 100%;
+            text-align: center;
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 14px;
+            z-index: 5;
+        }
+        
+        .protection-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.95);
+            color: white;
+            display: none;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            z-index: 1000;
+            font-size: 24px;
+            text-align: center;
+            padding: 20px;
+        }
+        
+        .protection-overlay h1 {
+            color: #ff3333;
+            margin-bottom: 20px;
+            font-size: 36px;
+        }
+        
+        .protection-overlay p {
+            margin-bottom: 15px;
+            max-width: 600px;
+            line-height: 1.6;
+        }
+        
+        .protection-overlay .btn {
+            margin-top: 20px;
+        }
+        
+        .accept-overlay {
+            display: none;
+        }
+        
+        .accept-overlay.active {
+            display: flex;
+        }
+        
+        .code-source {
+            position: fixed;
+            bottom: 10px;
+            right: 10px;
+            color: rgba(255, 255, 255, 0.3);
+            font-size: 10px;
+            z-index: 1;
+        }
+        
+        .bird {
+            position: absolute;
+            width: 40px;
+            height: 30px;
+            background: #FFD700;
+            border-radius: 50% 50% 40% 40%;
+            z-index: 2;
+            transform-style: preserve-3d;
+            transform: translateZ(20px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+        }
+        
+        .bird::before {
+            content: '';
+            position: absolute;
+            top: 10px;
+            right: -5px;
+            width: 15px;
+            height: 10px;
+            background: #FF8C00;
+            border-radius: 50%;
+        }
+        
+        .bird::after {
+            content: '';
+            position: absolute;
+            top: 15px;
+            left: 10px;
+            width: 8px;
+            height: 8px;
+            background: white;
+            border-radius: 50%;
+        }
+        
+        .pipe {
+            position: absolute;
+            width: 70px;
+            background: linear-gradient(to bottom, #228B22, #006400);
+            border: 3px solid #004d00;
+            border-radius: 8px;
+            transform-style: preserve-3d;
+            transform: translateZ(10px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+        }
+        
+        .pipe-top {
+            border-bottom: none;
+            border-radius: 8px 8px 0 0;
+        }
+        
+        .pipe-bottom {
+            border-top: none;
+            border-radius: 0 0 8px 8px;
+        }
+        
+        .cloud {
+            position: absolute;
+            background: white;
+            border-radius: 50%;
+            opacity: 0.9;
+            transform-style: preserve-3d;
+            transform: translateZ(5px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+        
+        .ground {
+            position: absolute;
+            bottom: 0;
+            width: 100%;
+            height: 80px;
+            background: linear-gradient(to bottom, #8B4513, #654321);
+            border-top: 5px solid #5D4037;
+            transform-style: preserve-3d;
+            transform: translateZ(15px);
+        }
+        
+        .ground::before {
+            content: '';
+            position: absolute;
+            top: -15px;
+            width: 100%;
+            height: 15px;
+            background: linear-gradient(to bottom, #90EE90, #76c776);
+            border-radius: 50% 50% 0 0;
+        }
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <canvas id="game-canvas"></canvas>
+        
+        <div id="score-display">Score: 0</div>
+        <button id="pause-btn">Pause</button>
+        
+        <div id="start-screen" class="screen">
+            <h1>3D Flappy Bird</h1>
+            <p class="instructions">Click or press SPACE to make the bird fly. Avoid the pipes! Adjust the game speed to your preference.</p>
+            
+            <div class="speed-controls">
+                <h3>Game Speed</h3>
+                <input type="range" min="1" max="10" value="5" class="speed-slider" id="speed-slider">
+                <div class="speed-value">Medium Speed</div>
+            </div>
+            
+            <button id="start-btn" class="btn">Start Game</button>
+            <div class="copyright">© 2025 Dem Studios. All Rights Reserved.</div>
+        </div>
+        
+        <div id="pause-screen" class="screen hidden">
+            <h2>Game Paused</h2>
+            <div class="speed-controls">
+                <h3>Adjust Game Speed</h3>
+                <input type="range" min="1" max="10" value="5" class="speed-slider" id="pause-speed-slider">
+                <div class="speed-value">Medium Speed</div>
+            </div>
+            <button id="resume-btn" class="btn">Resume</button>
+            <button id="restart-btn" class="btn">Restart</button>
+            <div class="copyright">© 2025 Dem Studios. All Rights Reserved.</div>
+        </div>
+        
+        <div id="game-over-screen" class="screen hidden">
+            <h2>Game Over!</h2>
+            <p class="final-score">Your score: <span id="final-score">0</span></p>
+            <div class="speed-controls">
+                <h3>Game Speed</h3>
+                <input type="range" min="1" max="10" value="5" class="speed-slider" id="gameover-speed-slider">
+                <div class="speed-value">Medium Speed</div>
+            </div>
+            <button id="play-again-btn" class="btn">Play Again</button>
+            <div class="copyright">© 2025 Dem Studios. All Rights Reserved.</div>
+        </div>
+    </div>
+    
+    <!-- Initial protection overlay -->
+    <div id="protection-overlay" class="protection-overlay">
+        <h1>UNAUTHORIZED ACCESS DETECTED</h1>
+        <p>This code is protected by copyright and intellectual property laws.</p>
+        <p>© 2025 Dem Studios. All Rights Reserved.</p>
+        <p>Unauthorized copying, distribution, or modification is strictly prohibited.</p>
+        <p>If you wish to use this code, please contact Dem Studios for licensing information.</p>
+        <button id="okay-btn" class="btn">Okay</button>
+    </div>
+    
+    <!-- Accept overlay for stolen code -->
+    <div id="accept-overlay" class="protection-overlay accept-overlay">
+        <h1>CODE USAGE AGREEMENT REQUIRED</h1>
+        <p>This code is intellectual property of Dem Studios © 2025.</p>
+        <p>By clicking "I ACCEPT", you agree:</p>
+        <ul style="text-align: left; margin: 20px 0; max-width: 500px;">
+            <li>Not to claim this code as your own work</li>
+            <li>To provide proper attribution to Dem Studios</li>
+            <li>Not to distribute or sell this code without permission</li>
+            <li>To use this code for educational purposes only</li>
+        </ul>
+        <button id="accept-btn" class="btn accept-btn">I ACCEPT</button>
+    </div>
+    
+    <!-- Hidden code source marker -->
+    <div class="code-source" id="code-source">DS-3DFB-2025-CODE</div>
+
+    <script>
+        // Protection system
+        (function() {
+            'use strict';
+            
+            // Hidden markers in the code
+            const codeMarkers = [
+                "DS-3DFB-2025-CODE",
+                "DemStudiosFlappyBird2025",
+                "CopyrightProtectedContent",
+                "IntellectualPropertyDemStudios"
+            ];
+            
+            // Check if code is being accessed from unauthorized locations
+            function checkAccess() {
+                // Check for code theft markers
+                if (detectCodeTheft()) {
+                    triggerCodeTheftResponse();
+                    return false;
+                }
+                
+                // Check if running on GitHub or similar platforms
+                if (window.location.hostname.includes('github.io') || 
+                    window.location.hostname.includes('gitlab.io') ||
+                    document.documentElement.innerHTML.includes('github') ||
+                    document.documentElement.innerHTML.includes('gitlab')) {
+                    showProtectionMessage();
+                    return false;
+                }
+                
+                // Check for common developer tools
+                if (isDevToolsOpen()) {
+                    showProtectionMessage();
+                    return false;
+                }
+                
+                // Check for right-click (context menu)
+                document.addEventListener('contextmenu', function(e) {
+                    e.preventDefault();
+                    showProtectionMessage();
+                    return false;
+                });
+                
+                // Check for common copy shortcuts
+                document.addEventListener('keydown', function(e) {
+                    // Disable Ctrl+C, Ctrl+U, F12, etc.
+                    if ((e.ctrlKey && (e.key === 'c' || e.key === 'u')) || 
+                        e.key === 'F12' || 
+                        (e.ctrlKey && e.shiftKey && e.key === 'I')) {
+                        e.preventDefault();
+                        showProtectionMessage();
+                        return false;
+                    }
+                });
+                
+                return true;
+            }
+            
+            function detectCodeTheft() {
+                // Check if code is running on unauthorized domains
+                const allowedDomains = ['localhost', '127.0.0.1', 'demstudios.com'];
+                const currentDomain = window.location.hostname;
+                
+                if (!allowedDomains.some(domain => currentDomain.includes(domain))) {
+                    return true;
+                }
+                
+                // Check if code markers are present but modified
+                const sourceMarker = document.getElementById('code-source');
+                if (!sourceMarker || sourceMarker.textContent !== codeMarkers[0]) {
+                    return true;
+                }
+                
+                // Check for DeepSeek or other AI platform indicators
+                if (navigator.userAgent.includes('DeepSeek') || 
+                    document.documentElement.innerHTML.includes('deepseek') ||
+                    document.title.includes('DeepSeek')) {
+                    return true;
+                }
+                
+                return false;
+            }
+            
+            function triggerCodeTheftResponse() {
+                // Start flashing screen
+                document.body.classList.add('flashing');
+                
+                // Show accept overlay after 3 seconds
+                setTimeout(() => {
+                    document.body.classList.remove('flashing');
+                    document.getElementById('accept-overlay').classList.add('active');
+                }, 3000);
+                
+                // Disable all game functionality
+                window.gameDisabled = true;
+                
+                // Clear any game intervals
+                const highestTimeoutId = setTimeout(() => {}, 0);
+                for (let i = 0; i < highestTimeoutId; i++) {
+                    clearTimeout(i);
+                }
+                
+                // Clear any animation frames
+                const highestAnimationId = requestAnimationFrame(() => {});
+                for (let i = 0; i < highestAnimationId; i++) {
+                    cancelAnimationFrame(i);
+                }
+            }
+            
+            function isDevToolsOpen() {
+                const widthThreshold = window.outerWidth - window.innerWidth > 160;
+                const heightThreshold = window.outerHeight - window.innerHeight > 160;
+                return widthThreshold || heightThreshold;
+            }
+            
+            function showProtectionMessage() {
+                document.getElementById('protection-overlay').style.display = 'flex';
+                document.body.style.overflow = 'hidden';
+                
+                // Disable all game functionality
+                window.gameDisabled = true;
+                
+                // Clear any game intervals
+                const highestTimeoutId = setTimeout(() => {}, 0);
+                for (let i = 0; i < highestTimeoutId; i++) {
+                    clearTimeout(i);
+                }
+                
+                // Clear any animation frames
+                const highestAnimationId = requestAnimationFrame(() => {});
+                for (let i = 0; i < highestAnimationId; i++) {
+                    cancelAnimationFrame(i);
+                }
+            }
+            
+            // Initialize protection
+            window.addEventListener('load', checkAccess);
+            window.addEventListener('resize', checkAccess);
+            
+            // Prevent iframe embedding
+            if (window.self !== window.top) {
+                showProtectionMessage();
+            }
+            
+            // Okay button event listener
+            document.getElementById('okay-btn').addEventListener('click', function() {
+                document.getElementById('protection-overlay').style.display = 'none';
+                document.body.style.overflow = 'auto';
+                window.gameDisabled = false;
+            });
+            
+            // Accept button event listener
+            document.getElementById('accept-btn').addEventListener('click', function() {
+                document.getElementById('accept-overlay').classList.remove('active');
+                document.body.style.overflow = 'auto';
+                window.gameDisabled = false;
+                
+                // Add attribution
+                const attribution = document.createElement('div');
+                attribution.style.cssText = 'position: fixed; top: 10px; left: 10px; background: rgba(0,0,0,0.7); color: white; padding: 10px; border-radius: 5px; z-index: 1000; font-size: 12px;';
+                attribution.textContent = 'Code by Dem Studios © 2025';
+                document.body.appendChild(attribution);
+            });
+        })();
+
+        // Game elements
+        const canvas = document.getElementById('game-canvas');
+        const ctx = canvas.getContext('2d');
+        const startScreen = document.getElementById('start-screen');
+        const pauseScreen = document.getElementById('pause-screen');
+        const gameOverScreen = document.getElementById('game-over-screen');
+        const startBtn = document.getElementById('start-btn');
+        const pauseBtn = document.getElementById('pause-btn');
+        const resumeBtn = document.getElementById('resume-btn');
+        const restartBtn = document.getElementById('restart-btn');
+        const playAgainBtn = document.getElementById('play-again-btn');
+        const scoreDisplay = document.getElementById('score-display');
+        const finalScore = document.getElementById('final-score');
+        
+        // Speed control elements
+        const speedSlider = document.getElementById('speed-slider');
+        const pauseSpeedSlider = document.getElementById('pause-speed-slider');
+        const gameoverSpeedSlider = document.getElementById('gameover-speed-slider');
+        const speedValue = document.querySelectorAll('.speed-value');
+
+        // Set canvas dimensions
+        canvas.width = 400;
+        canvas.height = 600;
+
+        // Game variables
+        let gameState = 'start'; // start, playing, paused, gameOver
+        let score = 0;
+        let frames = 0;
+        let animationId;
+        let gameSpeed = 5; // Default medium speed
+
+        // Bird properties
+        const bird = {
+            x: 50,
+            y: canvas.height / 2,
+            width: 40,
+            height: 30,
+            gravity: 0.5,
+            velocity: 0,
+            jump: -8,
+            
+            draw: function() {
+                if (window.gameDisabled) return;
+                
+                // Draw bird body
+                ctx.fillStyle = '#FFD700';
+                ctx.beginPath();
+                ctx.ellipse(this.x, this.y, this.width/2, this.height/2, 0, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Draw bird wing with animation
+                ctx.fillStyle = '#FFA500';
+                ctx.beginPath();
+                let wingOffset = Math.sin(frames * 0.2) * 3;
+                ctx.ellipse(this.x - 5, this.y + 5 + wingOffset, 10, 8, Math.PI/4, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Draw bird eye
+                ctx.fillStyle = 'white';
+                ctx.beginPath();
+                ctx.arc(this.x + 10, this.y - 5, 6, 0, Math.PI * 2);
+                ctx.fill();
+                
+                ctx.fillStyle = 'black';
+                ctx.beginPath();
+                ctx.arc(this.x + 12, this.y - 5, 3, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Draw bird beak
+                ctx.fillStyle = '#FF8C00';
+                ctx.beginPath();
+                ctx.moveTo(this.x + 20, this.y);
+                ctx.lineTo(this.x + 30, this.y - 5);
+                ctx.lineTo(this.x + 30, this.y + 5);
+                ctx.closePath();
+                ctx.fill();
+            },
+            
+            update: function() {
+                if (window.gameDisabled) return;
+                
+                // Apply gravity
+                this.velocity += this.gravity;
+                this.y += this.velocity;
+                
+                // Floor collision
+                if (this.y + this.height/2 >= canvas.height - 80) {
+                    this.y = canvas.height - 80 - this.height/2;
+                    if (gameState === 'playing') {
+                        gameOver();
+                    }
+                }
+                
+                // Ceiling collision
+                if (this.y - this.height/2 <= 0) {
+                    this.y = this.height/2;
+                    this.velocity = 0;
+                }
+            },
+            
+            flap: function() {
+                if (window.gameDisabled) return;
+                this.velocity = this.jump;
+            },
+            
+            reset: function() {
+                this.y = canvas.height / 2;
+                this.velocity = 0;
+            }
+        };
+
+        // Pipes array
+        const pipes = {
+            position: [],
+            gap: 150,
+            maxYPos: -100,
+            dx: 2,
+            
+            draw: function() {
+                if (window.gameDisabled) return;
+                
+                for (let i = 0; i < this.position.length; i++) {
+                    let p = this.position[i];
+                    
+                    // Top pipe
+                    ctx.fillStyle = '#228B22';
+                    ctx.fillRect(p.x, p.y, p.width, p.height);
+                    
+                    // Pipe top cap
+                    ctx.fillStyle = '#006400';
+                    ctx.fillRect(p.x - 3, p.y + p.height - 15, p.width + 6, 15);
+                    
+                    // Bottom pipe
+                    let bY = p.y + p.height + this.gap;
+                    ctx.fillStyle = '#228B22';
+                    ctx.fillRect(p.x, bY, p.width, canvas.height - bY);
+                    
+                    // Pipe bottom cap
+                    ctx.fillStyle = '#006400';
+                    ctx.fillRect(p.x - 3, bY, p.width + 6, 15);
+                }
+            },
+            
+            update: function() {
+                if (window.gameDisabled || gameState !== 'playing') return;
+                
+                // Adjust pipe generation frequency based on game speed
+                let pipeFrequency = Math.max(40, 100 - (gameSpeed * 8));
+                if (frames % pipeFrequency === 0) {
+                    this.position.push({
+                        x: canvas.width,
+                        y: this.maxYPos * (Math.random() + 1),
+                        width: 70,
+                        height: 200,
+                        scored: false
+                    });
+                }
+                
+                for (let i = 0; i < this.position.length; i++) {
+                    let p = this.position[i];
+                    
+                    // Adjust pipe speed based on game speed
+                    p.x -= this.dx * (gameSpeed / 5);
+                    
+                    // Check for score
+                    if (p.x + p.width < bird.x && !p.scored) {
+                        score++;
+                        scoreDisplay.textContent = `Score: ${score}`;
+                        p.scored = true;
+                    }
+                    
+                    // Collision detection
+                    if (
+                        bird.x + bird.width/2 > p.x && 
+                        bird.x - bird.width/2 < p.x + p.width && 
+                        (bird.y - bird.height/2 < p.y + p.height || 
+                         bird.y + bird.height/2 > p.y + p.height + this.gap)
+                    ) {
+                        gameOver();
+                    }
+                    
+                    // Remove pipes that have gone off screen
+                    if (p.x + p.width < 0) {
+                        this.position.shift();
+                    }
+                }
+            },
+            
+            reset: function() {
+                this.position = [];
+            }
+        };
+
+        // Background elements
+        const background = {
+            clouds: [],
+            
+            draw: function() {
+                if (window.gameDisabled) return;
+                
+                // Sky gradient
+                const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+                gradient.addColorStop(0, '#70c5ce');
+                gradient.addColorStop(1, '#1E90FF');
+                ctx.fillStyle = gradient;
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                
+                // Draw clouds
+                ctx.fillStyle = 'white';
+                for (let i = 0; i < this.clouds.length; i++) {
+                    let c = this.clouds[i];
+                    ctx.beginPath();
+                    ctx.arc(c.x, c.y, c.size, 0, Math.PI * 2);
+                    ctx.arc(c.x + c.size * 0.8, c.y - c.size * 0.2, c.size * 0.8, 0, Math.PI * 2);
+                    ctx.arc(c.x + c.size * 1.6, c.y, c.size * 0.7, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+                
+                // Draw ground
+                ctx.fillStyle = '#8B4513';
+                ctx.fillRect(0, canvas.height - 80, canvas.width, 80);
+                
+                // Draw grass
+                ctx.fillStyle = '#90EE90';
+                ctx.beginPath();
+                ctx.ellipse(canvas.width/2, canvas.height - 80, canvas.width/2, 20, 0, 0, Math.PI);
+                ctx.fill();
+            },
+            
+            update: function() {
+                if (window.gameDisabled) return;
+                
+                // Generate clouds
+                if (frames % 200 === 0) {
+                    this.clouds.push({
+                        x: canvas.width,
+                        y: Math.random() * 200 + 50,
+                        size: Math.random() * 30 + 20,
+                        speed: (Math.random() * 0.5 + 0.5) * (gameSpeed / 5)
+                    });
+                }
+                
+                // Move clouds
+                for (let i = 0; i < this.clouds.length; i++) {
+                    let c = this.clouds[i];
+                    c.x -= c.speed;
+                    
+                    // Remove clouds that have gone off screen
+                    if (c.x + c.size * 2 < 0) {
+                        this.clouds.shift();
+                    }
+                }
+            },
+            
+            reset: function() {
+                this.clouds = [];
+            }
+        };
+
+        // Game functions
+        function draw() {
+            if (window.gameDisabled) return;
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            background.draw();
+            pipes.draw();
+            bird.draw();
+        }
+
+        function update() {
+            if (window.gameDisabled) return;
+            bird.update();
+            pipes.update();
+            background.update();
+        }
+
+        function loop() {
+            if (window.gameDisabled) return;
+            
+            update();
+            draw();
+            
+            frames++;
+            animationId = requestAnimationFrame(loop);
+        }
+
+        function startGame() {
+            if (window.gameDisabled) return;
+            gameState = 'playing';
+            startScreen.classList.add('hidden');
+            score = 0;
+            scoreDisplay.textContent = `Score: ${score}`;
+            bird.reset();
+            pipes.reset();
+            background.reset();
+            frames = 0;
+            loop();
+        }
+
+        function pauseGame() {
+            if (window.gameDisabled) return;
+            if (gameState === 'playing') {
+                gameState = 'paused';
+                pauseScreen.classList.remove('hidden');
+                cancelAnimationFrame(animationId);
+            }
+        }
+
+        function resumeGame() {
+            if (window.gameDisabled) return;
+            if (gameState === 'paused') {
+                gameState = 'playing';
+                pauseScreen.classList.add('hidden');
+                loop();
+            }
+        }
+
+        function gameOver() {
+            if (window.gameDisabled) return;
+            gameState = 'gameOver';
+            cancelAnimationFrame(animationId);
+            finalScore.textContent = score;
+            gameOverScreen.classList.remove('hidden');
+        }
+
+        function restartGame() {
+            if (window.gameDisabled) return;
+            gameState = 'playing';
+            pauseScreen.classList.add('hidden');
+            gameOverScreen.classList.add('hidden');
+            score = 0;
+            scoreDisplay.textContent = `Score: ${score}`;
+            bird.reset();
+            pipes.reset();
+            background.reset();
+            frames = 0;
+            loop();
+        }
+
+        // Update speed based on slider value
+        function updateSpeed(slider, displayIndex) {
+            if (window.gameDisabled) return;
+            gameSpeed = parseInt(slider.value);
+            
+            // Update speed display text
+            let speedText = "";
+            if (gameSpeed <= 3) {
+                speedText = "Slow Speed";
+            } else if (gameSpeed <= 7) {
+                speedText = "Medium Speed";
+            } else {
+                speedText = "Fast Speed";
+            }
+            
+            speedValue[displayIndex].textContent = speedText;
+            
+            // Sync all sliders to the same value
+            speedSlider.value = gameSpeed;
+            pauseSpeedSlider.value = gameSpeed;
+            gameoverSpeedSlider.value = gameSpeed;
+            
+            // Update all speed displays
+            for (let i = 0; i < speedValue.length; i++) {
+                speedValue[i].textContent = speedText;
+            }
+        }
+
+        // Event listeners
+        startBtn.addEventListener('click', startGame);
+        pauseBtn.addEventListener('click', pauseGame);
+        resumeBtn.addEventListener('click', resumeGame);
+        restartBtn.addEventListener('click', restartGame);
+        playAgainBtn.addEventListener('click', restartGame);
+
+        // Speed control event listeners
+        speedSlider.addEventListener('input', () => updateSpeed(speedSlider, 0));
+        pauseSpeedSlider.addEventListener('input', () => updateSpeed(pauseSpeedSlider, 1));
+        gameoverSpeedSlider.addEventListener('input', () => updateSpeed(gameoverSpeedSlider, 2));
+
+        // Initialize speed display
+        updateSpeed(speedSlider, 0);
+
+        // Keyboard controls
+        document.addEventListener('keydown', function(e) {
+            if (window.gameDisabled) return;
+            if (e.code === 'Space') {
+                if (gameState === 'start') {
+                    startGame();
+                } else if (gameState === 'playing') {
+                    bird.flap();
+                } else if (gameState === 'paused') {
+                    resumeGame();
+                } else if (gameState === 'gameOver') {
+                    restartGame();
+                }
+                e.preventDefault();
+            } else if (e.code === 'Escape') {
+                if (gameState === 'playing') {
+                    pauseGame();
+                } else if (gameState === 'paused') {
+                    resumeGame();
+                }
+            }
+        });
+
+        // Mouse/touch controls
+        canvas.addEventListener('click', function() {
+            if (window.gameDisabled) return;
+            if (gameState === 'playing') {
+                bird.flap();
+            }
+        });
+
+        canvas.addEventListener('touchstart', function(e) {
+            if (window.gameDisabled) return;
+            if (gameState === 'playing') {
+                bird.flap();
+                e.preventDefault();
+            }
+        });
+    </script>
+</body>
+</html>
